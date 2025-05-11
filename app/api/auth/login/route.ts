@@ -5,19 +5,20 @@ import { generateToken } from '@/app/lib/jwt';
 
 
 export async function POST(req: Request) {
-  const { id, password } = await req.json();
+  const { name, password } = await req.json();
 
-  if (!id || !password) {
+  if (!name || !password) {
     return NextResponse.json({ error: 'Name and password are required' }, { status: 400 });
   }
 
-  const user = await prismaClient.user.findUnique({ where: { id } });
-
+  const user = await prismaClient.user.findUnique({ where: { name } });
+  console.log("users ",user);
+  
   if (!user || !(await bcrypt.compare(password, user.password || ''))) {
-    return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
+    return NextResponse.json({ error: 'Invalid password' }, { status: 401 });
   }
 
   const token = generateToken({ id: user.id });
 
-  return NextResponse.json({ message: 'Login successful', token });
+  return NextResponse.json({ message: 'Login successful', user,token });
 }

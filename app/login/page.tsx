@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useDispatch } from 'react-redux';
-import { setUser } from '../redux/slices/userSlice';
+import Header from '../components/Header';
+// import { useDispatch } from 'react-redux';
+// import { setUser } from '../redux/slices/userSlice';
 
 export default function Login() {
   const [isRegister, setIsRegister] = useState(false);
@@ -12,8 +13,15 @@ export default function Login() {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const router = useRouter();
-  const dispatch = useDispatch();
+  
+  useEffect(() => {
+    const user = localStorage.getItem("user");
 
+    if (user) {
+      router.push('/rooms');
+    }
+  }, [router]);
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -28,13 +36,11 @@ export default function Login() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-
       if (!response.ok) {
         throw new Error('Failed to authenticate');
       }
-
       const data = await response.json();
-      dispatch(setUser(data.user));
+      localStorage.setItem('user', JSON.stringify(data.user));
       localStorage.setItem('token', data.token);
       router.push('/rooms');
     } catch (err) {
@@ -43,15 +49,16 @@ export default function Login() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="w-full max-w-md bg-white p-8 shadow-lg rounded-lg">
-        <h2 className="text-xl font-bold mb-6">
+    <>
+    <Header showBackButton />
+    <div className="flex items-center justify-center min-h-screen bg-black">
+      <div className="w-full max-w-md bg-gray-900 p-8 shadow-lg rounded-lg">
+        <h2 className="text-xl font-bold mb-6 text-white">
           {isRegister ? 'Register' : 'Login'}
         </h2>
         <form onSubmit={handleSubmit}>
-          {isRegister && (
             <div className="mb-4">
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="name" className="block text-sm font-medium text-gray-300">
                 Name
               </label>
               <input
@@ -59,13 +66,13 @@ export default function Login() {
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full mt-1 p-2 border rounded"
+                className="w-full mt-1 p-2 border rounded bg-gray-800 text-white border-gray-700"
                 placeholder="Enter your name"
               />
             </div>
-          )}
+          {isRegister && (
           <div className="mb-4">
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="email" className="block text-sm font-medium text-gray-300">
               Email
             </label>
             <input
@@ -73,12 +80,13 @@ export default function Login() {
               id="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full mt-1 p-2 border rounded"
+              className="w-full mt-1 p-2 border rounded bg-gray-800 text-white border-gray-700"
               placeholder="Enter your email"
             />
           </div>
+           )}
           <div className="mb-4">
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="password" className="block text-sm font-medium text-gray-300">
               Password
             </label>
             <input
@@ -86,21 +94,21 @@ export default function Login() {
               id="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full mt-1 p-2 border rounded"
+              className="w-full mt-1 p-2 border rounded bg-gray-800 text-white border-gray-700"
               placeholder="Enter your password"
             />
           </div>
           {error && <p className="text-red-500 text-sm">{error}</p>}
           <button
             type="submit"
-            className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
+            className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700"
           >
             {isRegister ? 'Register' : 'Login'}
           </button>
         </form>
         <button
           onClick={() => setIsRegister((prev) => !prev)}
-          className="w-full mt-4 text-blue-500 hover:underline"
+          className="w-full mt-4 text-blue-400 hover:underline"
         >
           {isRegister
             ? 'Already have an account? Login'
@@ -108,5 +116,7 @@ export default function Login() {
         </button>
       </div>
     </div>
+    </>
+
   );
 }

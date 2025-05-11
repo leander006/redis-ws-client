@@ -1,41 +1,55 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useSelector, useDispatch } from 'react-redux';
-import { fetchRooms } from '@/redux/slices/roomSlice';
-import { RootState } from '../redux/store';
+import Link from 'next/link';
+import React, { useEffect, useState } from 'react';
+import Header from '../components/Header';
 
-export default function Rooms() {
-  const router = useRouter();
-  const dispatch = useDispatch();
-  const { rooms, loading, error } = useSelector((state: RootState) => state.room);
+const Page = () => {
+  const [rooms, setRooms] = useState<{ id: string; name: string }[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    dispatch(fetchRooms());
-  }, [dispatch]);
-
-  const handleRoomClick = (roomId: string) => {
-    router.push(`/chat/${roomId}`);
+  const getRooms = async () => {
+    try {
+      const res = await fetch(`/api/rooms`);
+      if (!res.ok) throw new Error('Failed to fetch rooms');
+      const data = await res.json();
+      setRooms(data);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('An error occurred');
+      }
+    }
   };
 
-  if (loading) return <p>Loading rooms...</p>;
-  if (error) return <p className="text-red-500">Error: {error}</p>;
+  useEffect(() => {
+    getRooms();
+  }, []);
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Available Rooms</h1>
-      <ul className="space-y-3">
-        {rooms.map((room) => (
-          <li
-            key={room.id}
-            onClick={() => handleRoomClick(room.id)}
-            className="cursor-pointer p-4 border rounded hover:bg-gray-200"
-          >
-            {room.name || 'Unnamed Room'}
-          </li>
-        ))}
-      </ul>
-    </div>
+    <>
+      <Header showBackButton={true} />
+      <div className="p-6">
+        <h1 className="text-2xl font-bold mb-4">Available Rooms</h1>
+        {error && <p className="text-red-500">{error}</p>}
+        <ul className="flex flex-col space-y-3">
+          {rooms
+            ?.sort((a, b) => a.name.localeCompare(b.name)) // Sort alphabetically
+            .reverse() // Reverse for descending order
+            .map((room) => (
+              <Link
+                key={room.id}
+                href={`/rooms/${room.id}`}
+                className="px-3 py-2 bg-zinc-900 hover:bg-zinc-800 rounded-md text-white"
+              >
+                {room.name || 'Unnamed Room'}
+              </Link>
+            ))}
+        </ul>
+      </div>
+    </>
   );
-}
+};
+
+export default Page;

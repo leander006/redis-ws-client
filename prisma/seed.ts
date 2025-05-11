@@ -5,80 +5,75 @@ const prisma = new PrismaClient();
 
 async function main() {
   // Create Users
-  const user1 = await prisma.user.create({
-    data: {
-      name: 'JohnDoe',
-      email: 'john@example.com',
-      password: await bcrypt.hash('password123', 10), // Hashed password
-    },
+  const users = await prisma.user.createMany({
+    data: [
+      { name: 'Alice', email: 'alice@example.com',password: await bcrypt.hash('password1', 10)},
+      { name: 'Bob', email: 'bob@example.com', password: await bcrypt.hash('password2', 10) },
+      { name: 'Charlie', email: 'charlie@example.com', password: await bcrypt.hash('password3', 10) },
+      { name: 'David', email: 'david@example.com',password: await bcrypt.hash('password123', 10)},
+      { name: 'Eve', email: 'eve@example.com',password: await bcrypt.hash('password12', 10) },
+    ],
+    skipDuplicates: true,
   });
 
-  const user2 = await prisma.user.create({
-    data: {
-      name: 'JaneSmith',
-      email: 'jane@example.com',
-      password: await bcrypt.hash('password456', 10), // Hashed password
-    },
-  });
+  console.log(`Created ${users.count} users.`);
 
-  const user3 = await prisma.user.create({
-    data: {
-      name: 'SamWilson',
-      email: 'sam@example.com',
-      password: await bcrypt.hash('password789', 10), // Hashed password
-    },
-  });
+  // Fetch created users
+  const allUsers = await prisma.user.findMany();
 
-  // Create Room
-  const room = await prisma.room.create({
-    data: {
-      name: 'Friendly Chat Room',
-      users: {
-        connect: [
-          { id: user1.id },
-          { id: user2.id },
-          { id: user3.id },
-        ], // Add users to this room
-      },
-    },
-  });
-
-  // Add Messages
-  const messages = [
-    { userId: user1.id, content: 'Hi everyone! How’s it going?', roomId: room.id },
-    { userId: user2.id, content: 'Hey John! All good here, how about you?', roomId: room.id },
-    { userId: user3.id, content: 'Hi John, hi Jane! I’m doing great.', roomId: room.id },
-    { userId: user1.id, content: 'I’m good too. Just finished some work and thought of catching up.', roomId: room.id },
-    { userId: user2.id, content: 'That’s nice. I was about to grab a coffee. Anyone joining?', roomId: room.id },
-    { userId: user3.id, content: 'I’d love to, but I have a meeting in 10 minutes. Maybe later?', roomId: room.id },
-    { userId: user1.id, content: 'Coffee sounds great! I’ll join you, Jane.', roomId: room.id },
-    { userId: user2.id, content: 'Awesome! Let’s meet at the café downstairs in 15 minutes.', roomId: room.id },
-    { userId: user3.id, content: 'Don’t forget to grab a latte for me. I’ll join you both after my meeting.', roomId: room.id },
-    { userId: user1.id, content: 'Noted! Latte for Sam.', roomId: room.id },
-    { userId: user2.id, content: 'Perfect. See you soon!', roomId: room.id },
-    { userId: user3.id, content: 'By the way, did you guys see the new project update?', roomId: room.id },
-    { userId: user1.id, content: 'Yes, I saw it. The deadline seems tight, but manageable.', roomId: room.id },
-    { userId: user2.id, content: 'Agreed. We’ll need to sync up regularly to stay on track.', roomId: room.id },
-    { userId: user3.id, content: 'For sure. Let’s plan a meeting later this week.', roomId: room.id },
-    { userId: user1.id, content: 'Sounds good. Friday works for me. Does it work for you both?', roomId: room.id },
-    { userId: user2.id, content: 'Friday is perfect. Let’s lock it in.', roomId: room.id },
-    { userId: user3.id, content: 'Friday it is then! Let’s make sure we’re well-prepared.', roomId: room.id },
-    { userId: user1.id, content: 'Absolutely. We’ve got this team!', roomId: room.id },
-    { userId: user2.id, content: 'Alright, see you soon for coffee!', roomId: room.id },
+  // Create Rooms
+  const roomData = [
+    { name: 'Room 1', userIds: [allUsers[0].id, allUsers[1].id] },
+    { name: 'Room 2', userIds: [allUsers[2].id, allUsers[3].id, allUsers[4].id] },
+    { name: 'Room 3', userIds: [allUsers[0].id, allUsers[4].id] },
   ];
 
-  await prisma.message.createMany({
-    data: messages,
-  });
+  for (const room of roomData) {
+    const createdRoom = await prisma.room.create({
+      data: {
+        name: room.name,
+        users: {
+          connect: room.userIds.map((id) => ({ id })),
+        },
+      },
+    });
 
-  console.log('Seed data created successfully!');
+    console.log(`Created ${createdRoom.name}.`);
+
+    // Add conversational messages to each room
+    const conversation = [
+      "Hi everyone! How’s it going?",
+      "Pretty good! How about you?",
+      "Doing great, just working on a project.",
+      "Sounds cool! What's the project about?",
+      "It’s about creating a chat application.",
+      "Oh nice, like WhatsApp?",
+      "Kind of! It’s for a coding challenge.",
+      "Good luck with it!",
+      "Thanks! What are you up to?",
+      "Just relaxing, watching a movie.",
+    ];
+
+    const messages = conversation.map((content, index) => ({
+      content,
+      roomId: createdRoom.id,
+      userId: room.userIds[index % room.userIds.length],
+    }));
+
+    await prisma.message.createMany({
+      data: messages,
+    });
+
+    console.log(`Added ${conversation.length} messages to ${room.name}.`);
+  }
 }
 
 main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(async () => {
+  .then(async () => {
     await prisma.$disconnect();
+  })
+  .catch(async (e) => {
+    console.error(e);
+    await prisma.$disconnect();
+    process.exit(1);
   });
